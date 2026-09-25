@@ -1,0 +1,9 @@
+data/
+logs/
+results/
+slurm/
+transfer_to_rorqual/
+*.tar.gz
+__pycache__/
+*.pyc
+venvs/

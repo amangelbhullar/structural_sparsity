@@ -1,0 +1,423 @@
+#!/usr/bin/env python3
+"""
+Final results aggregation for KGE stability survey.
+Collects all results, computes all metrics, saves to CSV files.
+"""
+
+import glob
+import json
+import os
+import math
+import pandas as pd
+import numpy as np
+from pathlib import Path
+
+BASE = Path.home() / "kg_experiments"
+RESULTS = BASE / "results"
+OUT     = BASE / "results" / "final"
+OUT.mkdir(parents=True, exist_ok=True)
+
+# ──────────────────────────────────────────────
+# 1. Collect all raw rows
+# ──────────────────────────────────────────────
+
+rows = []
+
+# ── PyKEEN models ──
+for f in glob.glob(str(RESULTS / "*_ep150_seed*.csv")):
+    df = pd.read_csv(f)
+    r  = df.iloc[0].to_dict()
+    rows.append({
+        "dataset":    r.get("dataset"),
+        "model":      r.get("model"),
+        "seed":       r.get("seed"),
+        "epochs":     r.get("epochs", 150),
+        "mrr":        r.get("mrr"),
+        "mr":         r.get("mr"),
+        "hits_at_1":  r.get("hits_at_1"),
+        "hits_at_3":  r.get("hits_at_3"),
+        "hits_at_10": r.get("hits_at_10"),
+        "runtime_seconds": r.get("runtime_seconds"),
+        "model_family": "PyKEEN",
+    })
+
+# ── RGCN ──
+for f in glob.glob(str(RESULTS / "rgcn" / "*.csv")):
+    df = pd.read_csv(f)
+    r  = df.iloc[0].to_dict()
+    rows.append({
+        "dataset":    r.get("dataset"),
+        "model":      "RGCN",
+        "seed":       r.get("seed"),
+        "epochs":     r.get("epochs", 150),
+        "mrr":        r.get("mrr"),
+        "mr":         r.get("mr"),
+        "hits_at_1":  r.get("hits_at_1"),
+        "hits_at_3":  r.get("hits_at_3"),
+        "hits_at_10": r.get("hits_at_10"),
+        "runtime_seconds": r.get("runtime_seconds"),
+        "model_family": "GNN",
+    })
+
+# ── CompGCN ──
+for f in glob.glob(str(RESULTS / "compgcn" / "*ep150*.csv")):
+    df = pd.read_csv(f)
+    r  = df.iloc[0].to_dict()
+    rows.append({
+        "dataset":    r.get("dataset"),
+        "model":      "CompGCN",
+        "seed":       r.get("seed"),
+        "epochs":     r.get("epochs", 150),
+        "mrr":        r.get("mrr"),
+        "mr":         r.get("mr"),
+        "hits_at_1":  r.get("hits_at_1"),
+        "hits_at_3":  r.get("hits_at_3"),
+        "hits_at_10": r.get("hits_at_10"),
+        "runtime_seconds": r.get("runtime_seconds"),
+        "model_family": "GNN",
+    })
+
+# ── DropEdge ──
+for f in glob.glob(str(RESULTS / "dropedge" / "*.csv")):
+    df = pd.read_csv(f)
+    r  = df.iloc[0].to_dict()
+    rows.append({
+        "dataset":    r.get("dataset"),
+        "model":      "DropEdge-RGCN",
+        "seed":       r.get("seed"),
+        "epochs":     r.get("epochs", 150),
+        "mrr":        r.get("mrr"),
+        "mr":         r.get("mr"),
+        "hits_at_1":  r.get("hits_at_1"),
+        "hits_at_3":  r.get("hits_at_3"),
+        "hits_at_10": r.get("hits_at_10"),
+        "runtime_seconds": r.get("runtime_seconds"),
+        "model_family": "Sparse-GNN",
+    })
+
+# ── RGAT ──
+for f in glob.glob(str(RESULTS / "rgat" / "*.csv")):
+    df = pd.read_csv(f)
+    r  = df.iloc[0].to_dict()
+    rows.append({
+        "dataset":    r.get("dataset"),
+        "model":      "RGAT",
+        "seed":       r.get("seed"),
+        "epochs":     r.get("epochs", 150),
+        "mrr":        r.get("mrr"),
+        "mr":         r.get("mr"),
+        "hits_at_1":  r.get("hits_at_1"),
+        "hits_at_3":  r.get("hits_at_3"),
+        "hits_at_10": r.get("hits_at_10"),
+        "runtime_seconds": r.get("runtime_seconds"),
+        "model_family": "Sparse-GNN",
+    })
+
+# ── ASR-GNN ──
+for f in glob.glob(str(RESULTS / "asr_gnn" / "**" / "best_test_metrics.json")):
+    d       = json.load(open(f))
+    cfg_f   = f.replace("best_test_metrics.json", "config.json")
+    st_f    = f.replace("best_test_metrics.json", "status.json")
+    cfg     = json.load(open(cfg_f)) if os.path.exists(cfg_f) else {}
+    st      = json.load(open(st_f))  if os.path.exists(st_f)  else {}
+    dirname = os.path.basename(os.path.dirname(f))
+    dataset = dirname.split("_")[0]
+    seed    = int(dirname.split("seed")[-1])
+    rows.append({
+        "dataset":    dataset,
+        "model":      "ASR-GNN",
+        "seed":       seed,
+        "epochs":     cfg.get("epochs", 150),
+        "mrr":        d.get("MRR",     d.get("mrr",        0)),
+        "mr":         d.get("MeanRank",d.get("mr",         0)),
+        "hits_at_1":  d.get("Hits@1",  d.get("hits_at_1",  0)),
+        "hits_at_3":  d.get("Hits@3",  d.get("hits_at_3",  0)),
+        "hits_at_10": d.get("Hits@10", d.get("hits_at_10", 0)),
+        "runtime_seconds": st.get("runtime_seconds", None),
+        "model_family": "Sparse-GNN",
+    })
+
+# ── AS-GNN ──
+for f in glob.glob(str(RESULTS / "asgnn" / "**" / "best_test_metrics.json")):
+    d       = json.load(open(f))
+    cfg_f   = f.replace("best_test_metrics.json", "config.json")
+    st_f    = f.replace("best_test_metrics.json", "status.json")
+    cfg     = json.load(open(cfg_f)) if os.path.exists(cfg_f) else {}
+    st      = json.load(open(st_f))  if os.path.exists(st_f)  else {}
+    dirname = os.path.basename(os.path.dirname(f))
+    dataset = dirname.split("_")[0]
+    seed    = int(dirname.split("seed")[-1])
+    rows.append({
+        "dataset":    dataset,
+        "model":      "AS-GNN",
+        "seed":       seed,
+        "epochs":     cfg.get("epochs", 150),
+        "mrr":        d.get("MRR",     d.get("mrr",        0)),
+        "mr":         d.get("MeanRank",d.get("mr",         0)),
+        "hits_at_1":  d.get("Hits@1",  d.get("hits_at_1",  0)),
+        "hits_at_3":  d.get("Hits@3",  d.get("hits_at_3",  0)),
+        "hits_at_10": d.get("Hits@10", d.get("hits_at_10", 0)),
+        "runtime_seconds": st.get("runtime_seconds", None),
+        "model_family": "Sparse-GNN",
+    })
+
+# ── SD-GNN ──
+for f in glob.glob(str(RESULTS / "sd_gnn" / "**" / "best_test_metrics.json")):
+    d       = json.load(open(f))
+    cfg_f   = f.replace("best_test_metrics.json", "config.json")
+    st_f    = f.replace("best_test_metrics.json", "status.json")
+    cfg     = json.load(open(cfg_f)) if os.path.exists(cfg_f) else {}
+    st      = json.load(open(st_f))  if os.path.exists(st_f)  else {}
+    dirname = os.path.basename(os.path.dirname(f))
+    dataset = dirname.split("_")[0]
+    seed    = int(dirname.split("seed")[-1])
+    rows.append({
+        "dataset":    dataset,
+        "model":      "SD-GNN",
+        "seed":       seed,
+        "epochs":     cfg.get("epochs", 150),
+        "mrr":        d.get("MRR",     d.get("mrr",        0)),
+        "mr":         d.get("MeanRank",d.get("mr",         0)),
+        "hits_at_1":  d.get("Hits@1",  d.get("hits_at_1",  0)),
+        "hits_at_3":  d.get("Hits@3",  d.get("hits_at_3",  0)),
+        "hits_at_10": d.get("Hits@10", d.get("hits_at_10", 0)),
+        "runtime_seconds": st.get("runtime_seconds", None),
+        "model_family": "Sparse-GNN",
+    })
+
+# ── TASR-GNN ──
+for f in glob.glob(str(RESULTS / "tasr_gnn" / "**" / "best_test_metrics.json")):
+    d       = json.load(open(f))
+    cfg_f   = f.replace("best_test_metrics.json", "config.json")
+    st_f    = f.replace("best_test_metrics.json", "status.json")
+    cfg     = json.load(open(cfg_f)) if os.path.exists(cfg_f) else {}
+    st      = json.load(open(st_f))  if os.path.exists(st_f)  else {}
+    dirname = os.path.basename(os.path.dirname(f))
+    dataset = dirname.split("_")[0]
+    seed    = int(dirname.split("seed")[-1])
+    rows.append({
+        "dataset":    dataset,
+        "model":      "TASR-GNN",
+        "seed":       seed,
+        "epochs":     cfg.get("epochs", 150),
+        "mrr":        d.get("MRR",     d.get("mrr",        0)),
+        "mr":         d.get("MeanRank",d.get("mr",         0)),
+        "hits_at_1":  d.get("Hits@1",  d.get("hits_at_1",  0)),
+        "hits_at_3":  d.get("Hits@3",  d.get("hits_at_3",  0)),
+        "hits_at_10": d.get("Hits@10", d.get("hits_at_10", 0)),
+        "runtime_seconds": st.get("runtime_seconds", None),
+        "model_family": "Temporal-GNN",
+    })
+
+# ──────────────────────────────────────────────
+# 2. All raw results
+# ──────────────────────────────────────────────
+
+all_df = pd.DataFrame(rows)
+all_df["amr"] = 1.0 / all_df["mrr"].replace(0, np.nan)  # approximate AMR from MRR
+
+# Model type taxonomy
+model_type_map = {
+    "TransE":       "Translational", "TransH":      "Translational",
+    "TransR":       "Translational", "TransD":      "Translational",
+    "DistMult":     "Factorization", "ComplEx":     "Factorization",
+    "RESCAL":       "Factorization", "SimplE":      "Factorization",
+    "CP":           "Factorization", "AutoSF":      "Factorization",
+    "RotatE":       "Geometric",     "QuatE":       "Geometric",
+    "TorusE":       "Geometric",     "MuRE":        "Geometric",
+    "PairRE":       "Geometric",     "BoxE":        "Geometric",
+    "ConvE":        "Neural",        "ConvKB":      "Neural",
+    "NTN":          "Neural",        "ERMLP":       "Neural",
+    "CrossE":       "Neural",        "TuckER":      "Neural",
+    "HolE":         "Semantic",      "KG2E":        "Probabilistic",
+    "NodePiece":    "Tokenization",
+    "RGCN":         "Dense-GNN",     "CompGCN":     "Dense-GNN",
+    "DropEdge-RGCN":"Random-Sparse", "RGAT":        "Soft-Sparse",
+    "SD-GNN":       "Hard-Sparse",   "ASR-GNN":     "Adaptive-Sparse",
+    "AS-GNN":       "Structure-Sparse",
+    "TASR-GNN":     "Temporal-Sparse",
+}
+all_df["model_type"] = all_df["model"].map(model_type_map).fillna("Other")
+
+all_df.to_csv(OUT / "all_raw_results.csv", index=False)
+print(f"Saved {len(all_df)} raw rows to all_raw_results.csv")
+
+# ──────────────────────────────────────────────
+# 3. Aggregate summary — all metrics
+# ──────────────────────────────────────────────
+
+agg = all_df.groupby(["dataset", "model", "model_type", "model_family"]).agg(
+    seeds        = ("mrr",             "count"),
+    mrr_mean     = ("mrr",             "mean"),
+    mrr_std      = ("mrr",             "std"),
+    mrr_min      = ("mrr",             "min"),
+    mrr_max      = ("mrr",             "max"),
+    mr_mean      = ("mr",              "mean"),
+    mr_std       = ("mr",              "std"),
+    hits1_mean   = ("hits_at_1",       "mean"),
+    hits1_std    = ("hits_at_1",       "std"),
+    hits3_mean   = ("hits_at_3",       "mean"),
+    hits3_std    = ("hits_at_3",       "std"),
+    hits10_mean  = ("hits_at_10",      "mean"),
+    hits10_std   = ("hits_at_10",      "std"),
+    runtime_mean = ("runtime_seconds", "mean"),
+    runtime_std  = ("runtime_seconds", "std"),
+).round(4).reset_index()
+
+# Stability score = 1 - (std/mean) — higher is more stable
+agg["stability"] = (1 - (agg["mrr_std"] / agg["mrr_mean"].replace(0, np.nan))).round(4)
+
+# MRR range (max - min across seeds)
+agg["mrr_range"] = (agg["mrr_max"] - agg["mrr_min"]).round(4)
+
+agg.to_csv(OUT / "summary_all_metrics.csv", index=False)
+print(f"Saved summary to summary_all_metrics.csv")
+
+# ──────────────────────────────────────────────
+# 4. Per-dataset ranked tables
+# ──────────────────────────────────────────────
+
+static_datasets  = ["FB15k-237", "WN18RR", "YAGO3-10"]
+temporal_datasets = ["ICEWS14", "ICEWS18", "GDELT"]
+
+print("\n" + "="*80)
+print("FULL RESULTS TABLE — ALL MODELS ALL DATASETS")
+print("="*80)
+
+for ds in static_datasets:
+    sub = agg[agg["dataset"] == ds].sort_values("mrr_mean", ascending=False)
+    print(f"\n{'='*70}")
+    print(f"  {ds}")
+    print(f"{'='*70}")
+    print(f"{'Model':<20} {'Type':<18} {'MRR':>7} {'±':>6} {'MR':>7} "
+          f"{'H@1':>7} {'H@3':>7} {'H@10':>7} {'Stab':>7} {'Seeds':>6}")
+    print("-"*90)
+    for _, r in sub.iterrows():
+        print(f"{r['model']:<20} {r['model_type']:<18} "
+              f"{r['mrr_mean']:>7.4f} {r['mrr_std']:>6.4f} "
+              f"{r['mr_mean']:>7.1f} "
+              f"{r['hits1_mean']:>7.4f} {r['hits3_mean']:>7.4f} "
+              f"{r['hits10_mean']:>7.4f} {r['stability']:>7.4f} "
+              f"{int(r['seeds']):>6}")
+
+# ──────────────────────────────────────────────
+# 5. Sparsification comparison table
+# ──────────────────────────────────────────────
+
+sparse_models = ["RGCN", "DropEdge-RGCN", "CompGCN", "RGAT",
+                 "SD-GNN", "AS-GNN", "ASR-GNN"]
+
+print("\n" + "="*80)
+print("SPARSIFICATION COMPARISON TABLE")
+print("="*80)
+sparse_df = agg[agg["model"].isin(sparse_models)]
+
+for ds in static_datasets:
+    sub = sparse_df[sparse_df["dataset"] == ds].sort_values("mrr_mean", ascending=False)
+    print(f"\n--- {ds} ---")
+    print(f"{'Model':<20} {'Sparsity':<18} {'MRR':>7} {'±':>6} "
+          f"{'H@1':>7} {'H@10':>7} {'Runtime(s)':>12} {'Stab':>7}")
+    print("-"*85)
+    for _, r in sub.iterrows():
+        rt = f"{r['runtime_mean']:.0f}" if not pd.isna(r['runtime_mean']) else "N/A"
+        print(f"{r['model']:<20} {r['model_type']:<18} "
+              f"{r['mrr_mean']:>7.4f} {r['mrr_std']:>6.4f} "
+              f"{r['hits1_mean']:>7.4f} {r['hits10_mean']:>7.4f} "
+              f"{rt:>12} {r['stability']:>7.4f}")
+
+# ──────────────────────────────────────────────
+# 6. Parameter efficiency table
+# ──────────────────────────────────────────────
+
+param_counts = {
+    "TransE":        2*14541*200 + 237*200,
+    "RotatE":        2*14541*200 + 237*200,
+    "ComplEx":       2*14541*200*2 + 237*200*2,
+    "QuatE":         2*14541*200*4 + 237*200*4,
+    "BoxE":          2*14541*200*2 + 237*200*2,
+    "CompGCN":       14541*200 + 237*200 + 200*200*3,
+    "RGCN":          14541*200 + 30*200*200*2 + 237*30*2 + 237*200,
+    "DropEdge-RGCN": 14541*200 + 30*200*200*2 + 237*30*2 + 237*200,
+    "RGAT":          14541*200 + 237*200 + 9922100,
+    "SD-GNN":        14541*200 + 237*200 + 600*200 + 200*200 + 200 + 800*200 + 200*200 + 200,
+    "AS-GNN":        14541*200 + 237*200 + 600*200 + 200*200 + 200 + 400*200 + 200*200 + 200,
+    "ASR-GNN":       14541*200 + 237*200 + 400*200 + 200*200 + 200*200 + 800*200 + 200*200 + 200 + 400*200 + 200*200 + 200*200,
+}
+
+print("\n" + "="*80)
+print("PARAMETER EFFICIENCY TABLE (FB15k-237)")
+print("="*80)
+fb_agg = agg[agg["dataset"] == "FB15k-237"].set_index("model")
+print(f"{'Model':<20} {'Params(K)':>10} {'MRR':>8} {'MRR/param':>12} {'Runtime(s)':>12}")
+print("-"*65)
+eff_rows = []
+for model, params in sorted(param_counts.items(), key=lambda x: x[1]):
+    if model in fb_agg.index:
+        mrr  = fb_agg.loc[model, "mrr_mean"]
+        rt   = fb_agg.loc[model, "runtime_mean"]
+        eff  = mrr / (params / 1000)
+        rt_s = f"{rt:.0f}" if not pd.isna(rt) else "N/A"
+        print(f"{model:<20} {params/1000:>10.1f} {mrr:>8.4f} "
+              f"{eff*1000:>12.4f} {rt_s:>12}")
+        eff_rows.append({"model": model, "params_k": params/1000,
+                         "mrr": mrr, "mrr_per_param": eff, "runtime": rt})
+
+eff_df = pd.DataFrame(eff_rows)
+eff_df.to_csv(OUT / "parameter_efficiency.csv", index=False)
+
+# ──────────────────────────────────────────────
+# 7. Stability analysis
+# ──────────────────────────────────────────────
+
+print("\n" + "="*80)
+print("STABILITY ANALYSIS (MRR std across 10 seeds)")
+print("="*80)
+
+for ds in static_datasets:
+    sub = agg[agg["dataset"] == ds].sort_values("mrr_std", ascending=True)
+    print(f"\n--- {ds} (lower std = more stable) ---")
+    print(f"{'Model':<20} {'MRR_mean':>10} {'MRR_std':>10} "
+          f"{'MRR_range':>12} {'CV%':>8}")
+    print("-"*65)
+    for _, r in sub.iterrows():
+        cv = (r["mrr_std"] / r["mrr_mean"] * 100) if r["mrr_mean"] > 0 else 0
+        print(f"{r['model']:<20} {r['mrr_mean']:>10.4f} "
+              f"{r['mrr_std']:>10.4f} {r['mrr_range']:>12.4f} {cv:>7.1f}%")
+
+# ──────────────────────────────────────────────
+# 8. Temporal results
+# ──────────────────────────────────────────────
+
+temporal_df = agg[agg["dataset"].isin(temporal_datasets)]
+if len(temporal_df) > 0:
+    print("\n" + "="*80)
+    print("TEMPORAL KGE RESULTS (TASR-GNN)")
+    print("="*80)
+    print(temporal_df[["dataset","model","mrr_mean","mrr_std",
+                        "hits1_mean","hits10_mean","seeds"]].to_string(index=False))
+    temporal_df.to_csv(OUT / "temporal_results.csv", index=False)
+else:
+    print("\nTASR-GNN results not yet available")
+
+# ──────────────────────────────────────────────
+# 9. Best model per dataset summary
+# ──────────────────────────────────────────────
+
+print("\n" + "="*80)
+print("BEST MODEL PER DATASET")
+print("="*80)
+for ds in static_datasets + temporal_datasets:
+    sub = agg[agg["dataset"] == ds]
+    if len(sub) == 0:
+        continue
+    best = sub.loc[sub["mrr_mean"].idxmax()]
+    print(f"{ds:<15} Best: {best['model']:<15} MRR={best['mrr_mean']:.4f} "
+          f"±{best['mrr_std']:.4f} H@10={best['hits10_mean']:.4f}")
+
+print("\n" + "="*80)
+print(f"All files saved to: {OUT}")
+print("  - all_raw_results.csv       (every seed, every model)")
+print("  - summary_all_metrics.csv   (aggregated, all metrics)")
+print("  - parameter_efficiency.csv  (MRR per param)")
+print("  - temporal_results.csv      (TASR-GNN if available)")
+print("="*80)

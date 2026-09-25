@@ -1,0 +1,16 @@
+=== AS-GNN vs HS-GNN (structural-conditioning effect) ===
+  FB15k-237 : n=10  mean(AS-GNN-HS-GNN)=-0.0010  paired-t p=0.6703  wilcoxon p=0.8125
+  WN18RR    : n=10  mean(AS-GNN-HS-GNN)=-0.0004  paired-t p=0.8353  wilcoxon p=0.6250
+  YAGO3-10  : n=10  mean(AS-GNN-HS-GNN)=+0.0019  paired-t p=0.6077  wilcoxon p=0.8125
+  CoDEx-S   : n=10  mean(AS-GNN-HS-GNN)=-0.0010  paired-t p=0.6527  wilcoxon p=0.8125
+  CoDEx-M   : n=10  mean(AS-GNN-HS-GNN)=-0.0007  paired-t p=0.6985  wilcoxon p=0.8125
+  CoDEx-L   : n=10  mean(AS-GNN-HS-GNN)=-0.0024  paired-t p=0.1025  wilcoxon p=0.1250
+
+=== ASR-GNN vs AS-GNN (query-conditioning effect) ===
+  FB15k-237 : n=10  mean(ASR-GNN-AS-GNN)=-0.0002  paired-t p=0.9461  wilcoxon p=1.0000
+  WN18RR    : n=10  mean(ASR-GNN-AS-GNN)=-0.0195  paired-t p=0.0000  wilcoxon p=0.0020  <-- p<0.05
+  YAGO3-10  : n=10  mean(ASR-GNN-AS-GNN)=-0.0063  paired-t p=0.1398  wilcoxon p=0.1309
+  CoDEx-S   : n=10  mean(ASR-GNN-AS-GNN)=-0.0074  paired-t p=0.1624  wilcoxon p=0.2754
+  CoDEx-M   : n=10  mean(ASR-GNN-AS-GNN)=-0.0246  paired-t p=0.0000  wilcoxon p=0.0020  <-- p<0.05
+  CoDEx-L   : n=10  mean(ASR-GNN-AS-GNN)=-0.0152  paired-t p=0.0000  wilcoxon p=0.0020  <-- p<0.05
+

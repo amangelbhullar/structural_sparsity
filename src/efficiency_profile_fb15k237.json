@@ -1,0 +1,20 @@
+{
+  "SD-GNN": {
+    "model": "SD-GNN",
+    "num_params": 3196401,
+    "flops_per_batch": null,
+    "latency_ms_per_batch": 0.276,
+    "peak_mem_gb": 0.0527,
+    "batch_size": 1024,
+    "device": "cuda"
+  },
+  "ASR-GNN": {
+    "model": "ASR-GNN",
+    "num_params": 3356801,
+    "flops_per_batch": null,
+    "latency_ms_per_batch": 0.338,
+    "peak_mem_gb": 0.0667,
+    "batch_size": 1024,
+    "device": "cuda"
+  }
+}
